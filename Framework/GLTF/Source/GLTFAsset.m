@@ -40,6 +40,7 @@
 
 @interface GLTFAsset ()
 @property (nonatomic, strong) NSURL *url;
+@property (nonatomic, strong) NSData *data;
 @property (nonatomic, strong) id<GLTFBufferAllocator> bufferAllocator;
 @property (nonatomic, weak) id<GLTFAssetLoadingDelegate> delegate;
 @property (nonatomic, copy) NSArray<GLTFAccessor *> *accessors;
@@ -84,6 +85,20 @@
 
 - (instancetype)initWithURL:(NSURL *)url bufferAllocator:(id<GLTFBufferAllocator>)bufferAllocator {
     return [self _initWithURL:url bufferAllocator:bufferAllocator delegate:nil];
+}
+
+- (instancetype)initWithData:(NSData *)data bufferAllocator:(id<GLTFBufferAllocator>)bufferAllocator {
+    if ((self = [super init])) {
+        _data = data;
+        _bufferAllocator = bufferAllocator;
+        NSError *error = nil;
+        if (![self loadWithError:&error]) {
+            [_delegate assetWithURL:_url didFailToLoadWithError:error];
+            return nil;
+        }
+    }
+    
+    return self;
 }
 
 - (instancetype)_initWithURL:(NSURL *)url bufferAllocator:(id<GLTFBufferAllocator>)bufferAllocator delegate:(id<GLTFAssetLoadingDelegate>)delegate {
@@ -156,7 +171,13 @@
     NSError *error = nil;
     NSDictionary *rootObject = nil;
     
-    NSData *assetData = [self _contentsOfURL:_url error:&error];
+    NSData *assetData = nil;
+    if (_data != nil) {
+        assetData = _data;
+    } else {
+        assetData = [self _contentsOfURL:_url error:&error];
+    }
+    
     if (assetData == nil) {
         return NO;
     }
